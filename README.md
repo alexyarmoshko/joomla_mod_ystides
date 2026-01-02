@@ -1,2 +1,2 @@
-# joomla_mod_ystides
-Yak Shaver Tides: displays tidal information for a selected tide station using ERDDAP data.
+# Yak Shaver Tides Joomla module
+Displays tidal information for a selected tide station on Irish coast using ERDDAP data.
