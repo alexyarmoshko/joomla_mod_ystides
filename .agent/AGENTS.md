@@ -1,44 +1,65 @@
-# AGENT Instructions for PHP/Joomla/YSTide module Work
+# AGENT Instructions for PHP/Joomla Work
 
 ## Scope
 
-This folder contains Joomla 5.X code for "YSTide" module. Changes should be limited to this module when possible, chaanges to any other part of this Joomla project must be confirmed. Analyze current repository and plan design and implementation of a new Joomla 5 module that will display tidal informationn for a station ID that is selected when module is configured. Plan will be multi staged with gradual increase of complexity, e.g. initial implementation of a minimal module wireframe, then adding data fetching and storage and later showing results. The module name is YSTides. It should fetch the information from the API service at "<https://erddap.marine.ie/erddap/tabledap/IMI-TidePrediction.html>" and store/cache the data in a SQLLite database described below. Only the data that is not cached yet should be retrievev from the given API. Each request should retrieve a whole days range Current Date + DaysRange. Upon retieval, data should be analised and rows marked (field TideCategory described below) as "h" for hiest values for that day, "l" for lowest values for that day, "f" for values increasing in value compared to a previous one and "e" for values decreasing. This module should have a configuration dropdown parameter StationID->Station Name and DaysRange (default value is 7). The output should be as a table with a first row showing a Station Name, second row showing a dates range (from - to inclusive both ends) and further rows showing columns with time, water lelel in meters (WLM described below) and a simbol triangle pointing down for low tide and triangle pointing up for high tide.
+This repo contains Joomla 5.4 code. Use the Joomla API and conventions; avoid ad-hoc PHP unless there is no core helper. Ignore "./.*" folders with subfolders as they are not relevant to understand the project.
+
+## Environment
+
+Match the PHP version to the Joomla 5.4.1 requirements in `README.txt`/docs (modern 8.3). Do not add system-level dependencies; keep changes self-contained.
+
+Development environment uses DDEV Windows WSL2 instance for launching local web development for PHP/Joomla.
+DDEV configuration stored in .ddev folder. In turn DDEV uses remote Docker host accessible via environment variable DOCKER_HOST.
+Consult with [DDEV documentation and examples](https://docs.ddev.com/en/stable/) if required.
 
 ## Coding style
 
-Follow Joomla style coding and entities names that can be found in other Joomla modules located in "/modules/\*" folder.
+Follow Joomla coding standards (PSR-12 based). Keep namespaces, type hints, and docblocks consistent with nearby code. Avoid adding `declare(strict_types=1);` if the file does not already use it.
+
+## Security
+
+Never trust request data. Use `$app->getInput()` and the filtering helpers (`getString`, `getInt`, etc.). Add CSRF protection for forms/actions (`Session::checkToken()` or form token fields). Escape output with Joomla helpers (`HTMLHelper`, `Text`, `$this->escape`).
+
+## Localization
+
+No hard-coded UI strings. Add/adjust language keys under `language/en-GB/` (and module/plugin language folders as appropriate) and load them via `Text::_()` / `Text::sprintf()`. For date formats Joomla configuration to be use, default for date is`DATE_FORMAT_LC4` and for time 24h format to be used.
 
 ## Database & services
 
-SQLLite database is to be used to store the cached data before it being send to UI. SQLLite database location should be configurable via module parameter with the default value "/cache/ystide/". This is approximate data scheme description:
+Use dependency injection/Factory (`Factory::getContainer()->get('DatabaseDriver')`) and query builders or Table classes. Parameterize queries; avoid manual concatenation.
 
-Database name: "YSTides"
+## Query database structure
 
-Table name: TideStations
+The database can be accessed with mysql command:
 
-StationName, TEXT -- Station Name
-StationID, TEXT -- Unique Station ID
-LonDegE, TEXT -- Longitude Degrees East
-LatDegN, TEXT -- Latitude Degrees North
-RefStationID, TEXT -- Reference (Main Port) Station ID, empty for Main Ports
-RefStationHWTimeOffset, TEXT -- High Water Time offset from Main Port
-RefStationLWTimeOffset, TEXT -- Low Water Time offset from Main Port
-RefStationHWLOffset, REAL -- High Water Level offset from Main Port
-RefStationLWLOffset, REAL -- Low Water Level offset from Main Port
-Primary key: StationID
+```bash
+mysql -u root -proot --port=32820 --host=192.168.0.93 db -e "<SQL command>"
+```
 
-Table name: TideData
+Query list of all tables:
 
-StationID, TEXT -- Station ID
-TideDT, TEXT -- Tide data point date and time in UTC
-TideCategory, TEXT -- Tide data point category: [l|h|f|e]. "l" for low water, "h" for hight water, "f" for flooding, "e" for ebbing
-TideCoefficient, INTEGER -- Tidal coefficient
-WLM, REAL -- Tide data point water level in meters
-WLODMM, REAL -- Tide data point water level OD Malin
-Primary key: StationID, TideDT
-Foreign key: StationID -> TideStations.StationID
+```bash
+mysql -u root -proot --port=32820 --host=192.168.0.93 db -e "SHOW TABLES;"
+```
+
+Query table structure:
+
+```bash
+mysql -u root -proot --port=32820 --host=192.168.0.93 db -e "DESCRIBE <table_name>;"
+```
+
+## MVC/Extensions
+
+Keep to Joomla MVC patterns for components (Controller → Model → View/Layout). For plugins, fire/handle the correct events; avoid direct core hacks. For templates/layouts, prefer Layout overrides and helpers over inline PHP/HTML mixing.
+
+## Assets
+
+Place JS/CSS via Joomla asset manager (`$document->getWebAssetManager()`); avoid inline scripts/styles when possible.
 
 ## Testing & checks
+
+`ddev logs` gets you web server logs.
+`ddev logs -s db` gets database server logs.
 
 If you touch PHP logic, add/adjust tests where they exist (PHPUnit/system). Run available linters/tests locally when practical; keep changes minimal if tests aren’t present.
 
