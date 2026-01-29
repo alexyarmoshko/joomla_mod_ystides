@@ -114,6 +114,3 @@ The version number is read from `<version>` in `mod_ystides.xml`.
 
 [GNU General Public License v2.0](LICENSE) or later.
 
-## Author
-
-**Yak Shaver** — [kayakshaver.com](https://www.kayakshaver.com) — me@kayakshaver.com
