@@ -1,12 +1,14 @@
-# YSTides Module — Implementation Record
+# Yak Shaver Tides (YSTides) Joomla 5 Site Module
 
 This Execution Plan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds. This document must be maintained in accordance with `.agent/PLANS.md`.
 
 ## Purpose / Big Picture
 
-The YSTides module gives Joomla site visitors a quick-glance tide forecast for any of 37 Irish coastal stations. After installing the module and selecting a station in the Joomla admin panel, a site visitor sees a compact table showing high/low tide times, water levels, tidal coefficients, moon phase icons, and active marine weather warnings for the configured number of days ahead (1–14, default 7). All data is fetched from public APIs, cached locally in SQLite, and rendered with Bootstrap styling inside the Joomla template.
+The YSTides module gives Joomla site visitors a quick-glance tide forecast for any of 38 Irish coastal stations. After installing the module and selecting a station in the Joomla admin panel, a site visitor sees a compact table showing high/low tide times, water levels, tidal coefficients, moon phase icons, and active marine weather warnings for the configured number of days ahead (1–14, default 7). All data is fetched from public APIs, cached locally in SQLite, and rendered with Bootstrap styling inside the Joomla template.
 
 ## Progress
+
+A detailed changelog with version-by-version history is maintained in [docs/execution_changelog.md](execution_changelog.md).
 
 - [x] (2026-01-16) Scaffold module — manifest, dispatcher, service provider, helper, default layout, language strings, params for StationID and DaysRange.
 - [x] (2026-01-17) SQLite data layer — DatabaseHelper creates/opens SQLite at `{JOOMLA_TMP}/ystides/ystides.sqlite`, creates `TideStations` and `TideData` tables with keys and indices.
@@ -74,11 +76,11 @@ The module lives at the repository root as a standard Joomla 5 site module. Its 
 - `src/Helper/TideDataFetcher.php` — Fetches CSV from Marine Institute ERDDAP API, parses rows, runs two-pass categorization (flooding/ebbing then high/low detection), calculates tide ranges and coefficients.
 - `src/Helper/MoonPhaseHelper.php` — Fetches moon phase dates from USNO API, caches by year in `TideMoonPhases` table.
 - `src/Helper/WeatherWarningHelper.php` — Fetches Met Éireann RSS feed with HTTP 304 cache validation, parses CAP XML per warning item, filters to marine warnings matching station area codes.
-- `src/Helper/StationCatalog.php` — Static array of 37 Irish tide stations with IDs, names, coordinates, and Met Éireann area codes. Seeds the `TideStations` table.
+- `src/Helper/StationCatalog.php` — Static array of 38 Irish tide stations with IDs, names, coordinates, and Met Éireann area codes. Seeds the `TideStations` table.
 - `tmpl/default.php` — Bootstrap-based template rendering the tide table with date/time columns, water level with coefficient badges, moon phase SVGs, and weather warning PNGs.
 - `media/css/template.css` — Styling for coefficient colour-coding (green/yellow/orange/red), info panel, and layout.
 - `media/images/` — Moon phase SVGs (`moon-{new,1q,full,2q}-details.svg`), weather warning PNGs at 1×/2×/3× densities, and the module logo.
-- `language/en-GB/mod_ystides.ini` — 48 language keys for all UI strings.
+- `language/en-GB/mod_ystides.ini` — 49 language keys for all UI strings.
 - `Makefile` — Build tool: `make dist` creates distribution ZIP and updates SHA256 in `mod_ystides.update.xml`.
 - `installation/` — Pre-built distribution ZIPs for each release.
 - `docs/` — Reference data (`IE_TIDE_STATIONS.json`, `MET_IE_FIPS_EMMA_ID.json`) and sample XML responses from APIs.
@@ -99,13 +101,13 @@ The SQLite database stores five tables:
 
 All implementation phases are described below for reference. Phases 1–7 are complete. Phase 8 remains.
 
-**Phase 1 — Scaffold module.** Created `mod_ystides.xml` manifest with module metadata, `station_id` list parameter (37 Irish stations), and `days_range` number parameter (1–14, default 7). Created `services/provider.php` to register DI factories, `src/Dispatcher/Dispatcher.php` as entry point, `src/Helper/YstidesHelper.php` as main helper, and `tmpl/default.php` as the layout template. Added language files under `language/en-GB/`.
+**Phase 1 — Scaffold module.** Created `mod_ystides.xml` manifest with module metadata, `station_id` list parameter (38 Irish stations), and `days_range` number parameter (1–14, default 7). Created `services/provider.php` to register DI factories, `src/Dispatcher/Dispatcher.php` as entry point, `src/Helper/YstidesHelper.php` as main helper, and `tmpl/default.php` as the layout template. Added language files under `language/en-GB/`.
 
 **Phase 2 — SQLite data layer.** Created `src/Helper/DatabaseHelper.php` to initialise SQLite at the Joomla tmp path. The helper creates the directory if missing, opens an SQLite3 connection, enables foreign keys, and creates `TideStations` and `TideData` tables with the schema described above. Added indices on `(StationID, TideDT)`.
 
 **Phase 3 — Fetch & cache.** Created `src/Helper/TideDataFetcher.php`. On each page load, it checks whether the requested date range is already cached. If not, it constructs an ERDDAP CSV URL selecting columns `time`, `stationID`, `longitude`, `latitude`, `Water_Level`, `Water_Level_ODM`, filtered by station and date range, ordered by time ascending. The CSV is streamed, parsed line-by-line, and inserted into `TideData`.
 
-**Phase 4 — Categorization.** After insertion, `TideDataFetcher` runs two passes over the data. The forward pass compares each water level to its predecessor: rising assigns `f` (flooding), falling assigns `e` (ebbing), equal inherits the previous category. The reverse pass identifies trend-change boundaries: an `e→f` transition marks the `e` point as `h` (high water), an `f→e` transition marks the `f` point as `l` (low water). Tide ranges (distance to next opposite extreme) and coefficients are then calculated. Dublin Port uses `(range × 100) / 3.5`. Other stations look up the nearest Dublin Port coefficient within ±1 hour of the same tide category.
+**Phase 4 — Categorization.** After insertion, `TideDataFetcher` runs two passes over the data. The forward pass compares each water level to its predecessor: rising assigns `f` (flooding), falling assigns `e` (ebbing), equal inherits the previous category. The reverse pass identifies trend-change boundaries: an `f→e` transition marks the `f` point as `h` (high water), an `e→f` transition marks the `e` point as `l` (low water). Tide ranges (distance to next opposite extreme) and coefficients are then calculated. Dublin Port uses `(range × 100) / 3.5`. Other stations look up the nearest Dublin Port coefficient within ±1 hour of the same tide category.
 
 **Phase 5 — Render output.** The template (`tmpl/default.php`) receives prepared data from the helper and renders a Bootstrap table. Each row shows the date (with moon phase and warning icons), UTC time, and water level with a colour-coded tidal coefficient badge. Consecutive tides of the same category and water level are grouped into single display rows. A collapsible info panel explains the data sources and coefficient scale.
 
@@ -173,27 +175,39 @@ Sample API responses are stored in `docs/samples/` for reference and offline dev
 
 **Key class signatures:**
 
+All helpers use Joomla's `DatabaseInterface` (backed by the SQLite driver) rather than raw `\SQLite3`. The database connection is obtained via `DatabaseHelper::prepareDatabase()` and passed to other helpers.
+
 In `src/Helper/DatabaseHelper.php`:
 
-    public static function initDatabase(string $tmpPath): \SQLite3
+    public function prepareDatabase(Registry $params): array{driver: DatabaseInterface, path: string}
 
 In `src/Helper/TideDataFetcher.php`:
 
-    public static function fetchAndCache(\SQLite3 $db, string $stationId, string $startDate, string $endDate): void
+    public function ensureRange(DatabaseInterface $db, string $stationId, Date $startDate, Date $endDate): void
 
 In `src/Helper/MoonPhaseHelper.php`:
 
-    public static function fetchAndCacheMoonPhases(\SQLite3 $db, string $startDate, string $endDate): void
+    public function ensurePhasesForYears(DatabaseInterface $db, array $years): void
+    public function getPhasesForRange(DatabaseInterface $db, string $startDate, string $endDate): array
 
 In `src/Helper/WeatherWarningHelper.php`:
 
-    public static function fetchAndCacheWarnings(\SQLite3 $db, string $stationId, string $startDate, string $endDate): array
+    public function ensureWarningsUpdated(DatabaseInterface $db): void
+    public function getWarningsForStation(DatabaseInterface $db, string $stationId, string $startDate, string $endDate): array
+    public static function getPrimaryWarningIcon(array $dayWarning): ?string
 
 In `src/Helper/StationCatalog.php`:
 
     public static function getStations(): array
     public static function findStation(string $stationId): ?array
+    public static function getStationLabel(string $stationId): string
 
 In `src/Helper/YstidesHelper.php`:
 
-    public function getLayoutVariables(object $params, \Joomla\CMS\Application\CMSApplicationInterface $app): array
+    public function getLayoutVariables(Registry $params): array
+
+---
+
+## Revision Notes
+
+**2026-02-09 — Documentation accuracy review.** Corrected station count from 37 to 38 throughout the document to match the actual `StationCatalog` and manifest. Fixed the categorisation reverse pass description: an `f→e` transition marks `h` (high water) and an `e→f` transition marks `l` (low water); the previous text had these labels swapped. Updated all method signatures in the Interfaces section to reflect the actual implementation (instance methods using `DatabaseInterface` rather than static methods with `\SQLite3`; correct method names such as `prepareDatabase`, `ensureRange`, `ensurePhasesForYears`, `ensureWarningsUpdated`). Added missing `getStationLabel()` to `StationCatalog` signatures. Corrected `YstidesHelper::getLayoutVariables` signature to `(Registry $params): array` (no `$app` parameter). Fixed language key count from 48 to 49. Extracted detailed changelog into `docs/execution_changelog.md`.
