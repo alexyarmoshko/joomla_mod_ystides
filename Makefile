@@ -9,7 +9,7 @@ ZIP_VERSION := $(subst .,-,$(VERSION))
 ZIP_NAME := $(MODULE_NAME)-v$(ZIP_VERSION).zip
 ZIP_PATH := $(INSTALL_DIR)/$(ZIP_NAME)
 
-PACKAGE_FILES := $(MANIFEST) services src tmpl language media
+PACKAGE_FILES := $(MANIFEST) LICENSE services src tmpl language media
 
 .PHONY: dist clean
 

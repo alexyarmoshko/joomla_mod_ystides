@@ -10,7 +10,7 @@
 }
 
 div.mod-ystides-info {
-  background-image: url('/media/mod_ystides/images/ystides_logo.svg');
+  background-image: url('../images/ystides_logo.svg');
   background-repeat: no-repeat;
   background-position: top center;
   background-size: contain;

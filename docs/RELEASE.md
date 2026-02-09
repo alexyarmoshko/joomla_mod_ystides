@@ -1,6 +1,6 @@
 # YSTides Release Notes
 
-## v1.0.5 (2026-01-28) — Current Release
+## v1.0.6 (2026-02-09) — Current Release
 
 Yak Shaver Tides is a Joomla 5 site module that displays tide predictions, moon phases, and marine weather warnings for 38 Irish coastal stations.
 
@@ -22,7 +22,7 @@ Yak Shaver Tides is a Joomla 5 site module that displays tide predictions, moon 
 
 ### Installation
 
-Download `mod_ystides-v1-0-5.zip` from the [Releases](https://github.com/alexyarmoshko/joomla_mod_ystides/releases) page and install via **System > Install > Extensions** in Joomla Admin.
+Download `mod_ystides-v1-0-6.zip` from the [Releases](https://github.com/alexyarmoshko/joomla_mod_ystides/releases) page and install via **System > Install > Extensions** in Joomla Admin.
 
 ### Data Sources
 
@@ -30,10 +30,25 @@ Download `mod_ystides-v1-0-5.zip` from the [Releases](https://github.com/alexyar
 - **Moon phases** — [U.S. Naval Observatory API](https://aa.usno.navy.mil/data/api)
 - **Weather warnings** — [Met Éireann RSS/CAP XML](https://www.met.ie/warnings-today.html)
 
+### Changes Since v1.0.5
+
+- Fixed hardcoded image paths — module now works when Joomla is installed in a subdirectory (uses `Uri::root(true)`)
+- Fixed CSS background-image to use relative path instead of absolute
+- Added LICENSE file to distribution ZIP packages
+- Fixed misleading code comment (3.4m → 3.5m) in tidal coefficient calculation
+- Updated copyright in all PHP files to `(C) 2026 Yak Shaver https://www.kayakshaver.com/`
+- Corrected "Met Eireann" to "Met Éireann" throughout documentation
+
 ### Known Limitations
 
 - Times are displayed in UTC only (no automatic IST conversion)
 - Parameter validation and unit tests are not yet implemented (planned for a future release)
+
+---
+
+## v1.0.5 (2026-01-28)
+
+Build and release tooling. Created Makefile with `dist` and `clean` targets. Configured `mod_ystides.update.xml` for Joomla update server with SHA256 verification.
 
 ---
 
