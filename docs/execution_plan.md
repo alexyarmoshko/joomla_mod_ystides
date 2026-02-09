@@ -58,7 +58,7 @@ A detailed changelog with version-by-version history is maintained in [docs/exec
 
 ## Outcomes & Retrospective
 
-Phases 1–7 are complete. The module is functional at v1.0.5 and deployed. All three external APIs (ERDDAP, USNO, Met Éireann) are integrated with local SQLite caching. The template renders a responsive Bootstrap table with tide data, moon phases, and weather warnings.
+Phases 1–7 are complete. The module is functional at v1.0.6 and deployed. All three external APIs (ERDDAP, USNO, Met Éireann) are integrated with local SQLite caching. The template renders a responsive Bootstrap table with tide data, moon phases, and weather warnings.
 
 Remaining work: Phase 8 (admin UX & tests) is not yet started. This includes parameter validation hardening, structured logging improvements, and unit tests for CSV parsing and the categorization algorithm.
 
@@ -77,8 +77,8 @@ The module lives at the repository root as a standard Joomla 5 site module. Its 
 - `src/Helper/MoonPhaseHelper.php` — Fetches moon phase dates from USNO API, caches by year in `TideMoonPhases` table.
 - `src/Helper/WeatherWarningHelper.php` — Fetches Met Éireann RSS feed with HTTP 304 cache validation, parses CAP XML per warning item, filters to marine warnings matching station area codes.
 - `src/Helper/StationCatalog.php` — Static array of 38 Irish tide stations with IDs, names, coordinates, and Met Éireann area codes. Seeds the `TideStations` table.
-- `tmpl/default.php` — Bootstrap-based template rendering the tide table with date/time columns, water level with coefficient badges, moon phase SVGs, and weather warning PNGs.
-- `media/css/template.css` — Styling for coefficient colour-coding (green/yellow/orange/red), info panel, and layout.
+- `tmpl/default.php` — Bootstrap-based template rendering the tide table with date/time columns, water level with coefficient badges, moon phase SVGs, and weather warning PNGs. Image paths use `Uri::root(true)` for subdirectory-safe URLs.
+- `media/css/template.css` — Styling for coefficient colour-coding (green/yellow/orange/red), info panel, and layout. Uses relative paths for background images.
 - `media/images/` — Moon phase SVGs (`moon-{new,1q,full,2q}-details.svg`), weather warning PNGs at 1×/2×/3× densities, and the module logo.
 - `language/en-GB/mod_ystides.ini` — 49 language keys for all UI strings.
 - `Makefile` — Build tool: `make dist` creates distribution ZIP and updates SHA256 in `mod_ystides.update.xml`.
@@ -211,3 +211,5 @@ In `src/Helper/YstidesHelper.php`:
 ## Revision Notes
 
 **2026-02-09 — Documentation accuracy review.** Corrected station count from 37 to 38 throughout the document to match the actual `StationCatalog` and manifest. Fixed the categorisation reverse pass description: an `f→e` transition marks `h` (high water) and an `e→f` transition marks `l` (low water); the previous text had these labels swapped. Updated all method signatures in the Interfaces section to reflect the actual implementation (instance methods using `DatabaseInterface` rather than static methods with `\SQLite3`; correct method names such as `prepareDatabase`, `ensureRange`, `ensurePhasesForYears`, `ensureWarningsUpdated`). Added missing `getStationLabel()` to `StationCatalog` signatures. Corrected `YstidesHelper::getLayoutVariables` signature to `(Registry $params): array` (no `$app` parameter). Fixed language key count from 48 to 49. Extracted detailed changelog into `docs/execution_changelog.md`.
+
+**2026-02-09 — Subdirectory-safe media paths.** Replaced hardcoded absolute image paths (`/media/mod_ystides/images/...`) in `tmpl/default.php` with `Uri::root(true)`-based paths so the module works when Joomla is installed in a subdirectory. Changed `media/css/template.css` background-image URL to a relative path (`../images/...`).

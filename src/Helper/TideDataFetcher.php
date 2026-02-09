@@ -4,7 +4,7 @@
  * @package     Joomla.Site
  * @subpackage  mod_ystides
  *
- * @copyright   (C) 2025 YSTides
+ * @copyright   (C) 2026 Yak Shaver https://www.kayakshaver.com/
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  */
 
@@ -377,8 +377,8 @@ UPDATE TideData AS TD
  WHERE TideCategory IN ('l', 'f')
    AND TideRange IS NULL;";
 
-# 3.4m is the mean tidal range at Dublin Port, this is reference value to calculate 
-# the tide coefficient for Irish coastal stations.
+# 3.5m is the mean spring tidal range at Dublin Port, this is the reference value
+# to calculate the tide coefficient for Irish coastal stations.
 
         $updateDublinPortRefCoeff = "
 UPDATE TideData

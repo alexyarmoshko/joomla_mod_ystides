@@ -9,9 +9,10 @@ This changelog is extracted from the [execution plan](execution_plan.md) and tra
 | 1.0.0 | 2026-01-16 | Module scaffold: manifest, dispatcher, service provider, helper, template, language strings |
 | 1.0.1 | 2026-01-20 | SQLite caching, ERDDAP data fetching, tide categorisation, station catalog, template rendering |
 | 1.0.2 | 2026-01-22 | Moon phase integration from USNO API |
-| 1.0.3 | 2026-01-25 | Met Eireann weather warnings with RSS/CAP XML parsing |
+| 1.0.3 | 2026-01-25 | Met Éireann weather warnings with RSS/CAP XML parsing |
 | 1.0.4 | 2026-01-27 | Bug fixes and refinements |
 | 1.0.5 | 2026-01-28 | Build and release tooling (Makefile, update server, distribution ZIPs) |
+| 1.0.6 | 2026-02-09 | Bug fixes, copyright update, subdirectory-safe media paths, LICENSE in package |
 
 ## Detailed Changelog
 
@@ -47,7 +48,7 @@ Phases 2-5 of the execution plan. Implemented the full data pipeline from API fe
 - Reverse pass: identifies trend-change boundaries. An `f`-to-`e` transition marks the `f` point as `h` (high water). An `e`-to-`f` transition marks the `e` point as `l` (low water).
 - Post-processing calculates tide ranges (distance to next opposite extreme) and tidal coefficients.
 - Dublin Port coefficient: `(range * 100) / 3.5`. Other stations use the nearest Dublin Port coefficient within +/-1 hour of the same tide category.
-- Created `src/Helper/StationCatalog.php` with a static array of 38 Irish tide stations including coordinates, reference station offsets, and Met Eireann area codes.
+- Created `src/Helper/StationCatalog.php` with a static array of 38 Irish tide stations including coordinates, reference station offsets, and Met Éireann area codes.
 
 **Render output (Phase 5, 2026-01-20):**
 - Template displays station name header, date range, and a Bootstrap table.
@@ -69,7 +70,7 @@ Phase 6 of the execution plan.
 Phase 7 of the execution plan.
 
 - Created `src/Helper/WeatherWarningHelper.php`.
-- HEAD request to Met Eireann RSS feed checks `Last-Modified` header against cached value in `WeatherWarningsMeta`.
+- HEAD request to Met Éireann RSS feed checks `Last-Modified` header against cached value in `WeatherWarningsMeta`.
 - If feed is unchanged (304-equivalent), cached data is used.
 - Otherwise, fetches RSS feed and parses each item's linked CAP XML for structured warning data (event, severity, onset, expires, area codes in FIPS and EMMA_ID formats).
 - Warnings filtered to marine-relevant: category is "Marine", event name contains "Small Craft", or area codes match EI8xx patterns.
@@ -80,9 +81,20 @@ Phase 7 of the execution plan.
 
 Bug fixes and UI refinements between the weather warning integration and the build tooling release.
 
-### v1.0.5 — Build and Release Tooling (2026-01-28)
+### v1.0.6 — Bug Fixes and Maintenance (2026-02-09)
 
-Phase 8 (build) of the execution plan. Current release.
+Current release. Fixes, copyright alignment, and subdirectory compatibility.
+
+- Fixed misleading code comment in `TideDataFetcher.php` that said "3.4m" while the calculation uses 3.5m.
+- Added `LICENSE` file to `Makefile` `PACKAGE_FILES` so the GPL license is included in distribution ZIPs.
+- Updated copyright in all 9 PHP files from `(C) 2025 YSTides` to `(C) 2026 Yak Shaver https://www.kayakshaver.com/`.
+- Replaced hardcoded absolute image paths in `tmpl/default.php` with `Uri::root(true)`-based paths so the module works when Joomla is installed in a subdirectory.
+- Changed CSS background-image URL from absolute to relative path (`../images/ystides_logo.svg`).
+- Fixed "Met Eireann" to "Met Éireann" (with fada) across documentation.
+- Corrected documentation: station count 37 to 38, categorisation algorithm description, method signatures, language key count.
+- Extracted changelog into `docs/execution_changelog.md` and created release notes at `docs/RELEASE.md`.
+
+### v1.0.5 — Build and Release Tooling (2026-01-28)
 
 - Created `Makefile` with `dist` and `clean` targets.
 - `make dist` creates a distribution ZIP at `installation/mod_ystides-v{X}-{Y}-{Z}.zip` and updates the SHA256 hash in `mod_ystides.update.xml`.

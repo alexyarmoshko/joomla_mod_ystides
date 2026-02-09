@@ -4,7 +4,7 @@
  * @package     Joomla.Site
  * @subpackage  mod_ystides
  *
- * @copyright   (C) 2025 YSTides
+ * @copyright   (C) 2026 Yak Shaver https://www.kayakshaver.com/
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  */
 

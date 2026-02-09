@@ -4,7 +4,7 @@
  * @package     Joomla.Site
  * @subpackage  mod_ystides
  *
- * @copyright   (C) 2025 YSTides
+ * @copyright   (C) 2026 Yak Shaver https://www.kayakshaver.com/
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  */
 
@@ -12,6 +12,7 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Uri\Uri;
 
 HTMLHelper::_('bootstrap.collapse');
 
@@ -19,6 +20,7 @@ HTMLHelper::_('bootstrap.collapse');
 $wa = $app->getDocument()->getWebAssetManager();
 $wa->registerAndUseStyle('mod_ystides', 'mod_ystides/template.css');
 
+$mediaPath = Uri::root(true) . '/media/mod_ystides/images';
 $moduleClassSfx = isset($moduleclass_sfx) ? $moduleclass_sfx : '';
 $stationHeader = $stationName ?? '';
 $dbErrorMessage = $dbError ?? '';
@@ -46,7 +48,7 @@ $infoId = 'ystides-info-' . $moduleId;
 					<?php echo htmlspecialchars($stationHeader, ENT_QUOTES, 'UTF-8'); ?>
 					<?php if ($headerWarningIcon): ?>
 						<a href="https://www.met.ie/warnings-today.html" target="_blank" class="ystides-header-warning">
-							<img src="/media/mod_ystides/images/warning-<?php echo htmlspecialchars($headerWarningIcon, ENT_QUOTES, 'UTF-8'); ?>@2x.png"
+							<img src="<?php echo $mediaPath; ?>/warning-<?php echo htmlspecialchars($headerWarningIcon, ENT_QUOTES, 'UTF-8'); ?>@2x.png"
 								width="18" height="18" style="margin-top:-2px; display:inline;"
 								title="<?php echo Text::_('MOD_YSTIDES_WARNING_' . strtoupper(str_replace('-', '_', $headerWarningIcon))); ?>"
 								alt="<?php echo Text::_('MOD_YSTIDES_WARNING_' . strtoupper(str_replace('-', '_', $headerWarningIcon))); ?>">
@@ -105,7 +107,7 @@ $infoId = 'ystides-info-' . $moduleId;
 								<td class="mod-ystides-table-data-col1">
 									<?php if ($prevMeanD !== $row['meand']): ?>
 										<?php if (!empty($row['moonPhase'])): ?>
-											<img src="/media/mod_ystides/images/moon-<?php echo $row['moonPhase']; ?>-details.svg"
+											<img src="<?php echo $mediaPath; ?>/moon-<?php echo $row['moonPhase']; ?>-details.svg"
 												width="14" height="14" style="margin-top:-3px; display:inline;"
 												title="<?php echo Text::_('MOD_YSTIDES_MOON_' . strtoupper($row['moonPhase'])); ?>"
 												alt="<?php echo Text::_('MOD_YSTIDES_MOON_' . strtoupper($row['moonPhase'])); ?>">
@@ -117,7 +119,7 @@ $infoId = 'ystides-info-' . $moduleId;
 										<span><?php echo HTMLHelper::_('date', $row['meandt'], 'j M', 'UTC'); ?></span>
 										<?php if (!empty($row['warningIcon'])): ?>
 											<a href="https://www.met.ie/warnings-today.html" target="_blank" class="ystides-warning-icon">
-												<img src="/media/mod_ystides/images/warning-<?php echo htmlspecialchars($row['warningIcon'], ENT_QUOTES, 'UTF-8'); ?>@2x.png"
+												<img src="<?php echo $mediaPath; ?>/warning-<?php echo htmlspecialchars($row['warningIcon'], ENT_QUOTES, 'UTF-8'); ?>@2x.png"
 													width="12" height="12" style="margin-top:-2px; display:inline;"
 													title="<?php echo Text::_('MOD_YSTIDES_WARNING_' . strtoupper(str_replace('-', '_', $row['warningIcon']))); ?>"
 													alt="<?php echo Text::_('MOD_YSTIDES_WARNING_' . strtoupper(str_replace('-', '_', $row['warningIcon']))); ?>">
