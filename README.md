@@ -1,15 +1,15 @@
-# YSTides — Joomla Tide Predictions Module
+# Yak Shaver Tides (YSTides) — Joomla Tide Predictions Module
 
-A Joomla 5 site module that displays tide predictions, moon phases, and marine weather warnings for 37 Irish coastal stations.
+A Joomla 5 site module that displays tide predictions, moon phases, and marine weather warnings for 38 Irish coastal stations.
 
 ## Features
 
 - **Tide predictions** — High/low tide times and water levels from the Marine Institute ERDDAP API
 - **Tidal coefficients** — Colour-coded badges indicating forecast tidal range relative to Dublin Port (3.5 m mean spring range)
 - **Moon phases** — Inline icons for new moon, first quarter, full moon, and last quarter from the U.S. Naval Observatory API
-- **Marine weather warnings** — Severity-coded icons for active warnings from Met Eireann, filtered to marine and small craft alerts
+- **Marine weather warnings** — Severity-coded icons for active warnings from Met Éireann, filtered to marine and small craft alerts
 - **Local caching** — SQLite database minimises API calls; weather warnings use HTTP 304 cache validation
-- **Configurable** — Select any of 37 Irish tide stations and a 1–14 day forecast window
+- **Configurable** — Select any of 38 Irish tide stations and a 1–14 day forecast window
 
 ## Requirements
 
@@ -39,10 +39,10 @@ A Joomla 5 site module that displays tide predictions, moon phases, and marine w
 ## Data Sources
 
 | Data | Source | API |
-|------|--------|-----|
+| ---- | ------ | --- |
 | Tide predictions | [Marine Institute](https://www.marine.ie/) | [ERDDAP IMI-TidePrediction](https://erddap.marine.ie/erddap/tabledap/IMI-TidePrediction.html) |
 | Moon phases | [U.S. Naval Observatory](https://aa.usno.navy.mil/) | [Moon Phases API](https://aa.usno.navy.mil/data/api) |
-| Weather warnings | [Met Eireann](https://www.met.ie/) | [Warnings RSS/CAP XML](https://www.met.ie/warnings-today.html) |
+| Weather warnings | [Met Éireann](https://www.met.ie/) | [Warnings RSS/CAP XML](https://www.met.ie/warnings-today.html) |
 
 ## How It Works
 
@@ -58,7 +58,7 @@ The module fetches CSV tide prediction data from the Marine Institute ERDDAP ser
 The tidal coefficient indicates the forecast tidal range compared with the mean equinoctial spring-tide range at Dublin Port (3.5 m). Coefficients range from ~20 (smallest neap tides) to ~120 (extraordinary spring tides).
 
 | Range | Label | Colour |
-|-------|-------|--------|
+| ----- | ----- | ------ |
 | < 50 | Low | Green |
 | 50–69 | Average | Yellow |
 | 70–89 | High | Orange |
@@ -76,7 +76,7 @@ Achill Island, Aranmore, Arklow, Ballycotton, Ballyglass, Bray Harbour, Buncrann
 
 ## Project Structure
 
-```
+```text
 mod_ystides.xml          # Joomla manifest (metadata, params, update server)
 services/provider.php    # DI service registration
 src/
@@ -87,8 +87,8 @@ src/
     DatabaseHelper.php   # SQLite initialisation and schema
     TideDataFetcher.php  # ERDDAP API client and tide categorisation
     MoonPhaseHelper.php  # USNO moon phase API client
-    WeatherWarningHelper.php  # Met Eireann warnings client
-    StationCatalog.php   # Static catalogue of 37 tide stations
+    WeatherWarningHelper.php  # Met Éireann warnings client
+    StationCatalog.php   # Static catalogue of 38 tide stations
 tmpl/
   default.php            # Bootstrap template
 media/
@@ -113,4 +113,3 @@ The version number is read from `<version>` in `mod_ystides.xml`.
 ## License
 
 [GNU General Public License v2.0](LICENSE) or later.
-
