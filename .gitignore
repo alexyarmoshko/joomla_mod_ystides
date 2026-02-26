@@ -3,3 +3,4 @@
 .vscode/
 *.zip
 .DS_Store
+.serena/
