@@ -124,6 +124,10 @@ class YstidesHelper
         $dbError = '';
         $dbPath = '';
         $fetchError = '';
+        $sourceUnavailable = false;
+        $lastUpdated = null;
+        $moonPhases = [];
+        $warnings = [];
 
         try {
             $dbInfo = $this->databaseHelper->prepareDatabase($params);
@@ -139,39 +143,74 @@ class YstidesHelper
             try {
                 // Always ensure that data for Dublin Port is available as it's needed for reference.
                 $this->tideDataFetcher->ensureRange($dbInfo['driver'], 'Dublin_Port', (clone $startDate)->modify('-2 days'), (clone $startDate)->modify('+14 days'));
+            } catch (Throwable $exception) {
+                $fetchError = $this->recordFetchFailure($exception);
+            }
 
+            try {
                 // Fetch data for the selected station +- 1 day to ensure proper tide range calculation.
-                $this->tideDataFetcher->ensureRange($dbInfo['driver'], $stationId, (clone $startDate)->modify('-1 days'), (clone $endDate)->modify('+1 days'));
+                $selectedTideStatus = $this->tideDataFetcher->ensureRange($dbInfo['driver'], $stationId, (clone $startDate)->modify('-1 days'), (clone $endDate)->modify('+1 days'));
+                $sourceUnavailable = $selectedTideStatus === TideDataFetcher::STATUS_SOURCE_UNAVAILABLE;
+            } catch (Throwable $exception) {
+                $fetchError = $this->recordFetchFailure($exception);
+            }
 
+            $startYear = (int) $startDate->format('Y');
+            $endYear = (int) $endDate->format('Y');
+            $years = ($startYear === $endYear) ? [$startYear] : [$startYear, $endYear];
+
+            try {
                 // Ensure moon phases are cached for the date range years.
-                $startYear = (int) $startDate->format('Y');
-                $endYear = (int) $endDate->format('Y');
-                $years = ($startYear === $endYear) ? [$startYear] : [$startYear, $endYear];
                 $this->moonPhaseHelper->ensurePhasesForYears($dbInfo['driver'], $years);
+            } catch (Throwable $exception) {
+                $this->recordExternalFailure('MOD_YSTIDES_ERR_MOON_API', $exception);
+            }
 
+            try {
                 // Get moon phases for display range.
                 $moonPhases = $this->moonPhaseHelper->getPhasesForRange(
                     $dbInfo['driver'],
                     (clone $startDate)->modify('-1 days')->format('Y-m-d'),
                     $endDate->format('Y-m-d')
                 );
+            } catch (Throwable $exception) {
+                $this->recordExternalFailure('MOD_YSTIDES_ERR_MOON_API', $exception);
+            }
 
+            try {
                 // Ensure weather warnings are up to date and get warnings for station.
                 $this->weatherWarningHelper->ensureWarningsUpdated($dbInfo['driver']);
+            } catch (Throwable $exception) {
+                $this->recordExternalFailure('MOD_YSTIDES_ERR_WARNING_API', $exception);
+            }
+
+            try {
                 $warnings = $this->weatherWarningHelper->getWarningsForStation(
                     $dbInfo['driver'],
                     $stationId,
                     $startDate->format('Y-m-d'),
                     $endDate->format('Y-m-d')
                 );
+            } catch (Throwable $exception) {
+                $this->recordExternalFailure('MOD_YSTIDES_ERR_WARNING_API', $exception);
+            }
 
+            try {
                 $this->displayRows = $this->loadDisplayRows($dbInfo['driver'], $stationId, $startDate, $endDate, $moonPhases, $warnings);
             } catch (Throwable $exception) {
-                $fetchError = Text::sprintf('MOD_YSTIDES_ERR_FETCH', $exception->getMessage());
-                Factory::getApplication()->enqueueMessage($fetchError, 'warning');
-                Log::add($exception->getMessage(), Log::ERROR, 'mod_ystides');
+                $fetchError = $this->recordFetchFailure($exception);
+            }
+
+            try {
+                // Last successful refresh of the displayed station (drives the stale banner).
+                $lastUpdated = $this->tideDataFetcher->getLastRefresh($dbInfo['driver'], $stationId);
+            } catch (Throwable $exception) {
+                $this->recordFetchFailure($exception);
             }
         }
+
+        // Stale = the selected-station source is unavailable but we still have cached rows to show.
+        $dataStale = $sourceUnavailable && !empty($this->displayRows);
 
         // Determine header warning - show if any row has a warning
         $headerWarning = null;
@@ -196,9 +235,44 @@ class YstidesHelper
             'dbPath' => $dbPath,
             'dbError' => $dbError,
             'fetchError' => $fetchError,
+            'sourceUnavailable' => $sourceUnavailable,
+            'dataStale' => $dataStale,
+            'lastUpdated' => $lastUpdated,
             'rows' => $this->displayRows,
             'headerWarning' => $headerWarning,
         ];
+    }
+
+    /**
+     * Record a tide-fetch/display failure without queueing a global Joomla message.
+     *
+     * @param   Throwable  $exception  Failure to record.
+     *
+     * @return  string  Diagnostic message.
+     *
+     * @since   1.1.0
+     */
+    private function recordFetchFailure(Throwable $exception): string
+    {
+        $message = Text::sprintf('MOD_YSTIDES_ERR_FETCH', $exception->getMessage());
+        Log::add($message, Log::ERROR, 'mod_ystides');
+
+        return $message;
+    }
+
+    /**
+     * Record a non-critical enrichment failure.
+     *
+     * @param   string     $languageKey  Language key for the log message.
+     * @param   Throwable  $exception    Failure to record.
+     *
+     * @return  void
+     *
+     * @since   1.1.0
+     */
+    private function recordExternalFailure(string $languageKey, Throwable $exception): void
+    {
+        Log::add(Text::sprintf($languageKey, $exception->getMessage()), Log::ERROR, 'mod_ystides');
     }
 
     /**

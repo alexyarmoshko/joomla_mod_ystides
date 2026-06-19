@@ -9,6 +9,7 @@ A Joomla 5 site module that displays tide predictions, moon phases, and marine w
 - **Moon phases** — Inline icons for new moon, first quarter, full moon, and last quarter from the U.S. Naval Observatory API
 - **Marine weather warnings** — Severity-coded icons for active warnings from Met Éireann, filtered to marine and small craft alerts
 - **Local caching** — SQLite database minimises API calls; weather warnings use HTTP 304 cache validation
+- **Graceful source outages** — Cached tide rows still render when ERDDAP is unavailable; cold caches show a service-unavailable empty state
 - **Configurable** — Select any of 38 Irish tide stations and a 1–14 day forecast window
 
 ## Requirements
@@ -52,6 +53,8 @@ The module fetches CSV tide prediction data from the Marine Institute ERDDAP ser
 
 1. **Forward pass** — Compares each water level to the previous: rising is marked as flooding (`f`), falling as ebbing (`e`)
 2. **Reverse pass** — Identifies trend-change points as high water (`h`) or low water (`l`)
+
+ERDDAP refreshes are time-boxed and isolated from rendering. If the upstream source is unavailable, the module still renders cached rows where possible; with no cached rows it shows a tide-source unavailable message instead of a blocking fetch error.
 
 ### Tidal Coefficients
 

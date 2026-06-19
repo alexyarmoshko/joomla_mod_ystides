@@ -201,9 +201,16 @@ CREATE TABLE IF NOT EXISTS WeatherWarningsMeta (
 );
 SQL;
 
+        $tideDataMetaSql = <<<SQL
+CREATE TABLE IF NOT EXISTS TideDataMeta (
+    Key TEXT PRIMARY KEY,
+    Value TEXT NOT NULL
+);
+SQL;
+
         $warningsIndexSql = 'CREATE INDEX IF NOT EXISTS idx_warnings_onset_expires ON WeatherWarnings (Onset, Expires);';
 
-        foreach ([$stationSql, $dataSql, $indexSql, $moonPhasesSql, $weatherWarningsSql, $weatherWarningsMetaSql, $warningsIndexSql] as $sql) {
+        foreach ([$stationSql, $dataSql, $indexSql, $moonPhasesSql, $weatherWarningsSql, $weatherWarningsMetaSql, $tideDataMetaSql, $warningsIndexSql] as $sql) {
             $db->setQuery($sql);
             $db->execute();
         }

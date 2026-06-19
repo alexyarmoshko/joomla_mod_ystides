@@ -16,6 +16,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Log\Log;
 use Joomla\Database\DatabaseInterface;
 use RuntimeException;
+use Throwable;
 
 // phpcs:disable PSR1.Files.SideEffects
 \defined('_JEXEC') or die;
@@ -29,6 +30,35 @@ use RuntimeException;
 class TideDataFetcher
 {
     private const BASE_URL = 'https://erddap.marine.ie/erddap/tabledap/IMI-TidePrediction.csv';
+    private const HTTP_TIMEOUT_SECONDS = 8;
+
+    /**
+     * How long cached data is considered current before a refresh is attempted (12 hours).
+     * Tide predictions are stable, so this is deliberately conservative.
+     *
+     * @since  1.1.0
+     */
+    private const FRESHNESS_TTL_SECONDS = 43200;
+
+    /**
+     * TideDataMeta key prefix for a station's last successful refresh timestamp.
+     *
+     * @since  1.1.0
+     */
+    private const META_KEY_LAST_REFRESH_PREFIX = 'LastRefresh:';
+
+    public const STATUS_FRESH = 'FRESH';
+    public const STATUS_REFRESHED = 'REFRESHED';
+    public const STATUS_SOURCE_UNAVAILABLE = 'SOURCE_UNAVAILABLE';
+    public const STATUS_STATION_ERROR = 'STATION_ERROR';
+
+    /**
+     * Request-local ERDDAP source failure marker.
+     *
+     * @var    bool
+     * @since  1.1.0
+     */
+    private bool $sourceUnavailableThisRequest = false;
 
     /**
      * Ensure tide data is cached for the given station and date range.
@@ -38,20 +68,44 @@ class TideDataFetcher
      * @param   Date               $startDate  Start date (UTC, inclusive, start of day).
      * @param   Date               $endDate    End date (UTC, inclusive, start of day).
      *
-     * @return  void
+     * @return  string  One of the STATUS_* constants.
      *
-     * @since   1.0.1
+     * @since   1.1.0
      */
-    public function ensureRange(DatabaseInterface $db, string $stationId, Date $startDate, Date $endDate): void
+    public function ensureRange(DatabaseInterface $db, string $stationId, Date $startDate, Date $endDate): string
     {
-        if ($this->isRangeCached($db, $stationId, $startDate, $endDate)) {
-            return;
+        // Decision order (see resilience plan §5.2b): freshness first, then the request-local
+        // short-circuit, then the network fetch. A fresh station is never collateral damage of
+        // a different station's failure earlier in the same request.
+        if ($this->isRangeFresh($db, $stationId, $startDate, $endDate)) {
+            return self::STATUS_FRESH;
+        }
+
+        if ($this->sourceUnavailableThisRequest) {
+            return self::STATUS_SOURCE_UNAVAILABLE;
         }
 
         $rangeStart = $startDate->format('Y-m-d') . 'T00:00:00Z';
         $rangeEnd   = $endDate->format('Y-m-d') . 'T23:59:59Z';
 
-        $rows = $this->fetchRange($stationId, $startDate, $endDate);
+        try {
+            $rows = $this->fetchRange($stationId, $startDate, $endDate);
+        } catch (Throwable $exception) {
+            $status = $this->classifyFetchFailure($exception);
+
+            if ($status === self::STATUS_SOURCE_UNAVAILABLE) {
+                $this->sourceUnavailableThisRequest = true;
+            }
+
+            Log::add(
+                Text::sprintf('MOD_YSTIDES_ERR_FETCH', $exception->getMessage()),
+                $status === self::STATUS_STATION_ERROR ? Log::WARNING : Log::ERROR,
+                'mod_ystides'
+            );
+
+            return $status;
+        }
+
         $rows = $this->assignCategories($rows);
         $rows = $this->filterToRange($rows, $rangeStart, $rangeEnd);
 
@@ -59,6 +113,11 @@ class TideDataFetcher
             $this->storeRows($db, $rows);
             $this->postProcessRanges($db, $stationId);
         }
+
+        // A successful fetch means the source is current, even if it returned no rows.
+        $this->setLastRefresh($db, $stationId);
+
+        return self::STATUS_REFRESHED;
     }
 
     /**
@@ -91,6 +150,97 @@ class TideDataFetcher
         };
 
         return $checkDay($startDate) && $checkDay($endDate);
+    }
+
+    /**
+     * Check if the range is cached and still within the freshness TTL.
+     *
+     * A range is fresh only when both endpoint days are present AND the station's last
+     * successful refresh is within FRESHNESS_TTL_SECONDS. Pre-meta caches (no LastRefresh)
+     * and data older than the TTL are treated as stale, prompting a refresh attempt.
+     *
+     * @param   DatabaseInterface  $db         Database connection.
+     * @param   string             $stationId  Station identifier.
+     * @param   Date               $startDate  Start date.
+     * @param   Date               $endDate    End date.
+     *
+     * @return  bool
+     *
+     * @since   1.1.0
+     */
+    private function isRangeFresh(DatabaseInterface $db, string $stationId, Date $startDate, Date $endDate): bool
+    {
+        if (!$this->isRangeCached($db, $stationId, $startDate, $endDate)) {
+            return false;
+        }
+
+        $lastRefresh = $this->getLastRefresh($db, $stationId);
+
+        if ($lastRefresh === null) {
+            return false;
+        }
+
+        $age = $this->now() - (int) strtotime($lastRefresh);
+
+        return $age >= 0 && $age <= self::FRESHNESS_TTL_SECONDS;
+    }
+
+    /**
+     * Get the ISO-8601 UTC timestamp of a station's last successful refresh, if known.
+     *
+     * @param   DatabaseInterface  $db         Database connection.
+     * @param   string             $stationId  Station identifier.
+     *
+     * @return  string|null
+     *
+     * @since   1.1.0
+     */
+    public function getLastRefresh(DatabaseInterface $db, string $stationId): ?string
+    {
+        $query = $db->getQuery(true)
+            ->select($db->quoteName('Value'))
+            ->from($db->quoteName('TideDataMeta'))
+            ->where($db->quoteName('Key') . ' = ' . $db->quote(self::META_KEY_LAST_REFRESH_PREFIX . $stationId));
+
+        $db->setQuery($query);
+
+        $value = $db->loadResult();
+
+        return $value !== null && $value !== '' ? (string) $value : null;
+    }
+
+    /**
+     * Record a station's last successful refresh as the current UTC time.
+     *
+     * @param   DatabaseInterface  $db         Database connection.
+     * @param   string             $stationId  Station identifier.
+     *
+     * @return  void
+     *
+     * @since   1.1.0
+     */
+    private function setLastRefresh(DatabaseInterface $db, string $stationId): void
+    {
+        $sql = sprintf(
+            'INSERT INTO TideDataMeta (Key, Value) VALUES (%s, %s) ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value',
+            $db->quote(self::META_KEY_LAST_REFRESH_PREFIX . $stationId),
+            $db->quote(gmdate('Y-m-d\TH:i:s\Z', $this->now()))
+        );
+
+        $db->setQuery($sql);
+        $db->execute();
+    }
+
+    /**
+     * Current UTC time as a Unix timestamp. Isolated as a seam for testing the TTL logic.
+     *
+     * @return  int
+     *
+     * @since   1.1.0
+     */
+    protected function now(): int
+    {
+        return time();
     }
 
     /**
@@ -129,29 +279,46 @@ class TideDataFetcher
 
         $queryString = self::BASE_URL . '?' . rawurlencode($columns . '&' . implode('&', [$stationParam, $startParam, $endParam, $orderParam]));
 
-        $http     = HttpFactory::getHttp();
-        
-        # Logging the request URL
-        Log::add(
-                Text::sprintf('MOD_YSTIDES_FETCHING', $queryString),
-                Log::INFO,
-                'mod_ystides'
-            );
+        $http = HttpFactory::getHttp();
 
-        $response = $http->get($queryString, ['Accept' => 'text/csv', 'Accept-Encoding' => 'gzip']);
+        Log::add(
+            Text::sprintf('MOD_YSTIDES_FETCHING', $queryString),
+            Log::INFO,
+            'mod_ystides'
+        );
+
+        $response = $http->get($queryString, ['Accept' => 'text/csv', 'Accept-Encoding' => 'gzip'], self::HTTP_TIMEOUT_SECONDS);
 
         if ($response->code < 200 || $response->code >= 300) {
-            Log::add(
-                Text::sprintf('MOD_YSTIDES_ERR_FETCH', $response->code) . ' URL: ' . $queryString . ' Response Body: ' . $response->body,
-                Log::ERROR,
-                'mod_ystides'
+            throw new RuntimeException(
+                'HTTP ' . $response->code . ' URL: ' . $queryString . ' Response Body: ' . $response->body,
+                (int) $response->code
             );
-            throw new RuntimeException(Text::sprintf('MOD_YSTIDES_ERR_FETCH', $response->code));
         }
 
         $rows = $this->parseCsvBody($response->body, $stationId);
 
         return $rows;
+    }
+
+    /**
+     * Classify ERDDAP failures for Phase A resilience behaviour.
+     *
+     * @param   Throwable  $exception  Fetch exception.
+     *
+     * @return  string  STATUS_SOURCE_UNAVAILABLE or STATUS_STATION_ERROR.
+     *
+     * @since   1.1.0
+     */
+    private function classifyFetchFailure(Throwable $exception): string
+    {
+        $code = (int) $exception->getCode();
+
+        if ($code >= 400 && $code < 500 && $code !== 429) {
+            return self::STATUS_STATION_ERROR;
+        }
+
+        return self::STATUS_SOURCE_UNAVAILABLE;
     }
 
     /**

@@ -1,6 +1,30 @@
 # YSTides Release Notes
 
-## v1.0.6 (2026-02-09) — Current Release
+## v1.1.0 (2026-06-19) — Current Release
+
+Makes the module resilient to outages of the Marine Institute ERDDAP tide-data source. The module no longer hangs or blanks when the source is slow or unavailable: it keeps showing the most recent cached forecast with a clear staleness notice, and degrades gracefully when there is nothing cached.
+
+### Added
+
+- Graceful degradation during a tide-data-source outage: cached predictions keep displaying instead of an error or empty table.
+- A dismissible "cached data" banner showing the last-updated time (or noting it is unknown, for caches created by older versions) when the live source cannot be reached.
+- A "tide data temporarily unavailable" message when the source is down and there is no cached data to fall back on.
+- An 8-second timeout on tide-data fetches, so a slow or unreachable source can no longer hang page loads (previously up to ~60 seconds).
+- A `TideDataMeta` cache table recording each station's last successful refresh, with a 12-hour freshness window — cached data is reused without a network call until it ages out, then a refresh is attempted.
+
+### Changed
+
+- Tide, moon-phase, and weather-warning refreshes — and the cached-table rendering — are now isolated, so one source failing no longer blocks the rest of the table.
+- A slow or failed source for one station no longer cascades into repeated failed requests for other stations within the same page load.
+- Source/fetch errors are written to the log only, instead of surfacing as site-wide Joomla warning messages.
+
+### Upgrade notes
+
+- Safe in-place upgrade from 1.0.6 (`method="upgrade"`). No manual steps required.
+- The new `TideDataMeta` table is created automatically on first page render (`CREATE TABLE IF NOT EXISTS`); existing cached tide data is preserved.
+- Immediately after upgrading, stations briefly show as "stale" until the first successful refresh records a last-updated time — this is expected and self-healing.
+
+## v1.0.6 (2026-02-09)
 
 Yak Shaver Tides is a Joomla 5 site module that displays tide predictions, moon phases, and marine weather warnings for 38 Irish coastal stations.
 

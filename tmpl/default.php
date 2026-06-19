@@ -15,6 +15,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 
 HTMLHelper::_('bootstrap.collapse');
+HTMLHelper::_('bootstrap.alert');
 
 /** @var Joomla\CMS\WebAsset\WebAssetManager $wa */
 $wa = $app->getDocument()->getWebAssetManager();
@@ -24,7 +25,9 @@ $mediaPath = Uri::root(true) . '/media/mod_ystides/images';
 $moduleClassSfx = isset($moduleclass_sfx) ? $moduleclass_sfx : '';
 $stationHeader = $stationName ?? '';
 $dbErrorMessage = $dbError ?? '';
-$fetchErrorMessage = $fetchError ?? '';
+$isSourceUnavailable = !empty($sourceUnavailable);
+$isDataStale = !empty($dataStale);
+$lastUpdatedRaw = $lastUpdated ?? null;
 $rowsData = $rows ?? [];
 $headerWarningIcon = $headerWarning ?? null;
 $moduleId = isset($module) ? (int) $module->id : rand(1000, 9999);
@@ -36,12 +39,28 @@ $infoId = 'ystides-info-' . $moduleId;
 		<div class="alert alert-warning">
 			<?php echo htmlspecialchars($dbErrorMessage, ENT_QUOTES, 'UTF-8'); ?>
 		</div>
-	<?php elseif ($fetchErrorMessage !== ''): ?>
-		<div class="alert alert-warning">
-			<?php echo htmlspecialchars($fetchErrorMessage, ENT_QUOTES, 'UTF-8'); ?>
-		</div>
 	<?php else: ?>
 		<div class="mod-ystides__wrap collapse multi-collapse show" id="<?php echo $mainId; ?>">
+			<?php if ($isDataStale): ?>
+				<div class="alert alert-warning alert-dismissible fade show py-2 px-3 small mb-2" role="alert">
+					<?php
+					if ($lastUpdatedRaw) {
+						echo htmlspecialchars(
+							Text::sprintf(
+								'MOD_YSTIDES_DATA_STALE_SINCE',
+								HTMLHelper::_('date', $lastUpdatedRaw, 'd M Y H:i', 'UTC') . ' UTC'
+							),
+							ENT_QUOTES,
+							'UTF-8'
+						);
+					} else {
+						echo htmlspecialchars(Text::_('MOD_YSTIDES_DATA_STALE_UNKNOWN'), ENT_QUOTES, 'UTF-8');
+					}
+					?>
+					<button type="button" class="btn-close" data-bs-dismiss="alert"
+						aria-label="<?php echo Text::_('JCLOSE'); ?>"></button>
+				</div>
+			<?php endif; ?>
 			<div class="d-flex align-items-center justify-content-between mb-2">
 				<div class="fw-semibold" style="text-align: center; width:100%"
 					title="<?php echo Text::sprintf('MOD_YSTIDES_HEADER_DESC', htmlspecialchars($stationHeader, ENT_QUOTES, 'UTF-8')); ?>">
@@ -79,7 +98,7 @@ $infoId = 'ystides-info-' . $moduleId;
 				<tbody>
 					<?php if (empty($rowsData)): ?>
 						<tr class="mod-ystides-empty">
-							<td colspan="3"><?php echo Text::_('MOD_YSTIDES_NO_DATA'); ?></td>
+							<td colspan="3"><?php echo Text::_($isSourceUnavailable ? 'MOD_YSTIDES_SOURCE_UNAVAILABLE' : 'MOD_YSTIDES_NO_DATA'); ?></td>
 						</tr>
 					<?php else: ?>
 						<?php $prevMeanD = null; ?>
