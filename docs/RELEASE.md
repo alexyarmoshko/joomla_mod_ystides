@@ -1,6 +1,6 @@
 # YSTides Release Notes
 
-## v1.1.0 (2026-06-19) — Current Release
+## 1.1.0 (2026-06-19) — Current Release
 
 Makes the module resilient to outages of the Marine Institute ERDDAP tide-data source. The module no longer hangs or blanks when the source is slow or unavailable: it keeps showing the most recent cached forecast with a clear staleness notice, and degrades gracefully when there is nothing cached.
 
@@ -24,7 +24,7 @@ Makes the module resilient to outages of the Marine Institute ERDDAP tide-data s
 - The new `TideDataMeta` table is created automatically on first page render (`CREATE TABLE IF NOT EXISTS`); existing cached tide data is preserved.
 - Immediately after upgrading, stations briefly show as "stale" until the first successful refresh records a last-updated time — this is expected and self-healing.
 
-## v1.0.6 (2026-02-09)
+## 1.0.6 (2026-02-09)
 
 Yak Shaver Tides is a Joomla 5 site module that displays tide predictions, moon phases, and marine weather warnings for 38 Irish coastal stations.
 
@@ -70,19 +70,19 @@ Download `mod_ystides-v1-0-6.zip` from the [Releases](https://github.com/alexyar
 
 ---
 
-## v1.0.5 (2026-01-28)
+## 1.0.5 (2026-01-28)
 
 Build and release tooling. Created Makefile with `dist` and `clean` targets. Configured `mod_ystides.update.xml` for Joomla update server with SHA256 verification.
 
 ---
 
-## v1.0.4 (2026-01-27)
+## 1.0.4 (2026-01-27)
 
 Bug fixes and UI refinements.
 
 ---
 
-## v1.0.3 (2026-01-25)
+## 1.0.3 (2026-01-25)
 
 ### Added
 
@@ -95,7 +95,7 @@ Bug fixes and UI refinements.
 
 ---
 
-## v1.0.2 (2026-01-22)
+## 1.0.2 (2026-01-22)
 
 ### Added
 
@@ -105,7 +105,7 @@ Bug fixes and UI refinements.
 
 ---
 
-## v1.0.1 (2026-01-20)
+## 1.0.1 (2026-01-20)
 
 ### Added
 
@@ -121,7 +121,7 @@ Bug fixes and UI refinements.
 
 ---
 
-## v1.0.0 (2026-01-16)
+## 1.0.0 (2026-01-16)
 
 ### Added
 

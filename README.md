@@ -98,20 +98,31 @@ media/
   css/template.css       # Module styles
   images/                # Moon phase SVGs, warning PNGs (1x/2x/3x)
 language/en-GB/          # English language strings
-Makefile                 # Build: make dist
+Makefile                 # Build: make release, make dist_release, make dist_dev
+tools/jzip.php           # Deterministic ZIP writer used by the build
 ```
 
-## Building from Source
+## Building
 
-Requires GNU Make and `zip`.
+Packages are **reproducible**: the ZIP bytes depend only on the packaged files and one timestamp — nothing about the machine that built it — so a release can be rebuilt from its tag and still hash to the `sha256` the update descriptor claims. Needs `make`, `git` and `php`; no Composer and no `zip` binary, since the packager is the vendored `tools/jzip.php`.
 
-```bash
-make dist    # Creates installation/mod_ystides-v{X}-{Y}-{Z}.zip
-             # and updates SHA256 in mod_ystides.update.xml
-make clean   # Removes the distribution ZIP
-```
+One caveat on that claim: packages are deflated (`ZIP_LEVEL=9`), so the compressed bytes come from zlib. That is stable across zlib *versions*, but not guaranteed across *implementations* — zlib-ng, shipped as the zlib provider by some distributions, deflates differently. Build with `make dist_release ZIP_LEVEL=0` if a third party has to re-derive the checksum with no assumption about the compressor; it stores rather than deflates and is reproducible by construction.
 
-The version number is read from `<version>` in `mod_ystides.xml`.
+| Target | What it does |
+| --- | --- |
+| `make info` | Shows the version, the packaged file list, and the output paths. |
+| `make test` | No automated tests in this repository; the target says so rather than passing silently. |
+| `make lint` | Syntax-checks every shipped PHP file plus the packager, and both XML files. |
+| `make release` | Validates (clean tree, unused tag, release notes heading, test, lint) and tags the manifest `<version>`. |
+| `make dist_release` | Packages **that tag** into `installation/release/`, and writes the update descriptor beside it. |
+| `make dist_dev` | Packages the **working tree** into `installation/dev/` for a test site; strips `<updateservers>` so the test install cannot update over itself. |
+| `make clean` | Removes `build/` and both package directories. |
+
+What ships is one explicit list (`PACKAGE_FILES` in the [Makefile](Makefile)) — never a directory, so a stray file cannot be published by accident. The trade is that a new module file is **silently left out** until it is added to that list; the build only fails the other way round, when a listed file is missing. Check `make info` after adding one.
+
+To cut a release: bump `<version>` in `mod_ystides.xml` and in `mod_ystides.update.xml`, add the matching `## <version>` section to [docs/RELEASE.md](docs/RELEASE.md), commit, then `make release && make dist_release`. Upload **that exact ZIP** as the release asset, then publish the generated `installation/release/mod_ystides.update.xml` at the location the manifest's `<updateservers>` entry points to — currently [joomla_update_system](https://github.com/alexyarmoshko/joomla_update_system), as `manifests/mod_ystides.update.xml` — in that order, since a descriptor published before its asset announces a download that 404s.
+
+The tracked `mod_ystides.update.xml` is a **template**: its `<sha256>` is a 64-zero placeholder and the build refuses to run without it. The real checksum only exists once the package is built, so the published descriptor is a build artifact and is never committed here.
 
 ## License
 
