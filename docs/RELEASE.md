@@ -1,6 +1,20 @@
 # YSTides Release Notes
 
-## 1.1.0 (2026-06-19) — Current Release
+## 1.1.1 (2026-08-08) — Current Release
+
+A build and distribution release. Tide, moon-phase and weather-warning behaviour is identical to 1.1.0.
+
+### Changed
+
+- Release packages are now reproducible — rebuilding a release from its tag yields the checksum its update descriptor claims. See [Building](../README.md#building).
+- The update server moved to [joomla_update_system](https://github.com/alexyarmoshko/joomla_update_system) (`manifests/mod_ystides.update.xml`).
+
+### Upgrade notes
+
+- **Sites running 1.1.0 or earlier will not be offered this update automatically.** Joomla records the update server URL per site at install time, so copies installed before the move keep pointing at the old location and will silently see no further updates. Install 1.1.1 manually once (System → Install → Extensions, upload the ZIP); updates from 1.1.1 onward work normally.
+- Otherwise a safe in-place upgrade (`method="upgrade"`). No database or configuration changes; cached tide data and module settings are preserved.
+
+## 1.1.0 (2026-06-19)
 
 Makes the module resilient to outages of the Marine Institute ERDDAP tide-data source. The module no longer hangs or blanks when the source is slow or unavailable: it keeps showing the most recent cached forecast with a clear staleness notice, and degrades gracefully when there is nothing cached.
 
