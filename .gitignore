@@ -1,7 +1,11 @@
-.agent/
-.claude/
-.vscode/
-*.zip
-.DS_Store
-.serena/
 .env
+.DS_Store
+Thumbs.db
+installation/
+build/
+vendor/
+node_modules/
+.phpunit.cache/
+phpunit.xml
+coverage/
+.playwright-mcp/
